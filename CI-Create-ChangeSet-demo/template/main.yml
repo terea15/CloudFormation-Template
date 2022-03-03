@@ -1,0 +1,43 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "Launch CI-Create-ChangeSet-demo"
+
+
+# ------------------------------------------------------------
+# Input Parameters
+# ------------------------------------------------------------
+Parameters: 
+  PJPrefix:
+    Type: String
+    
+    
+### Resources ###
+Resources:
+# ------------------------------------------------------------
+# CFn Stack
+# ------------------------------------------------------------
+  NW:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: "network.yml"
+      Parameters:
+        PJPrefix: !Ref PJPrefix
+        
+  SG:
+    Type: AWS::CloudFormation::Stack
+    DependsOn: NW
+    Properties:
+      TemplateURL: "sg.yml"
+      Parameters: 
+        PJPrefix: !Ref PJPrefix
+        VPC: !GetAtt NW.Outputs.VPC
+        
+  EC2:
+    Type: AWS::CloudFormation::Stack
+    DependsOn: SG
+    Properties:
+      TemplateURL: "server.yml"
+      Parameters: 
+        PJPrefix: !Ref PJPrefix
+        VPC: !GetAtt NW.Outputs.VPC
+        SubnetId: !GetAtt NW.Outputs.PublicSubnet
+        WebSG: !GetAtt SG.Outputs.WebSG

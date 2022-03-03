@@ -1,0 +1,44 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "Launch CI-Create-ChangeSet-demo"
+
+
+# ------------------------------------------------------------
+# Input Parameters
+# ------------------------------------------------------------
+Parameters:
+### Project Prefix ###
+  PJPrefix:
+    Type: String
+  VPC:
+    Type: String
+    
+
+### Resources ###
+Resources:
+# ------------------------------------------------------------
+# SecurityGroup
+# ------------------------------------------------------------
+### Web Server Security Group ###
+    WebSG:
+        Type: "AWS::EC2::SecurityGroup"
+        Properties:
+            GroupDescription: "https"
+            GroupName: !Sub "${PJPrefix}-WebSG"
+            VpcId: !Ref VPC
+            Tags: 
+                - Key: Name
+                  Value: !Sub "${PJPrefix}-WebSG"
+            SecurityGroupIngress:
+                IpProtocol: tcp
+                FromPort : 80
+                ToPort : 80
+                CidrIp: 0.0.0.0/0
+                
+                
+# ------------------------------------------------------------
+# Output Parameter
+# ------------------------------------------------------------
+Outputs:
+### SecurityGroup ###
+    WebSG:
+        Value: !Ref WebSG

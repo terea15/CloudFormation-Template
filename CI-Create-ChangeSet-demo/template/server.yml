@@ -1,0 +1,47 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "Launch CI-Create-ChangeSet-demo"
+
+
+# ------------------------------------------------------------
+# Input Parameters
+# ------------------------------------------------------------
+Parameters:
+  PJPrefix:
+    Type: String
+  VPC:
+    Type: String
+  PublicSubnet:
+    Type: String
+  WebSG:
+    Type: String
+    
+    
+### Resources ###
+Resources: 
+# ------------------------------------------------------------
+# EC2
+# ------------------------------------------------------------
+### AvailabilityZone-A ###
+  EC2Web: 
+    Type: AWS::EC2::Instance
+    Properties: 
+      ImageId: ami-07b4f72c4c356c19d
+      InstanceType: t2.micro
+      IamInstanceProfile: !Ref SSMRoleProfile
+      NetworkInterfaces: 
+        - AssociatePublicIpAddress: "true"
+          DeviceIndex: "0"
+          SubnetId: !Ref PublicSubnet
+          GroupSet:
+            - !Ref WebSG
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          sudo yum -y update
+          sudo yum -y install httpd
+          sudo systemctl start httpd
+          sudo systemctl enable httpd
+          sudo echo "Success Page" > /var/www/html/index.html
+      Tags:
+          - Key: Name
+            Value: !Sub "${PJPrefix}-WebServer"

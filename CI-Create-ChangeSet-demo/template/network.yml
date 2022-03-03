@@ -1,0 +1,108 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "Launch CI-Create-ChangeSet-demo"
+    
+
+# ------------------------------------------------------------
+# Input Parameters
+# ------------------------------------------------------------
+Parameters:
+### Project Prefix ###
+  PJPrefix:
+    Type: String
+### VPC ###
+  VPCCIDR:
+    Type: String
+    Default: "192.168.0.0/20"
+### Public Subnet ###
+  PublicSubnetCIDR:
+    Type: String
+    Default: "192.168.1.0/24"
+    
+
+### Resources ###
+Resources: 
+# ------------------------------------------------------------
+# VPC
+# ------------------------------------------------------------
+  VPC: 
+    Type: "AWS::EC2::VPC"
+    Properties: 
+      CidrBlock: !Ref VPCCIDR
+      EnableDnsSupport: "true"
+      EnableDnsHostnames: "true"
+      InstanceTenancy: default
+      Tags: 
+        - Key: Name
+          Value: !Sub "${PJPrefix}-VPC"
+          
+          
+# ------------------------------------------------------------
+# InternetGateway:
+# ------------------------------------------------------------
+  InternetGateway: 
+    Type: "AWS::EC2::InternetGateway"
+    Properties: 
+      Tags: 
+        - Key: Name
+          Value: !Sub "${PJPrefix}-IGW"
+          
+  IGWAttachment: 
+    Type: "AWS::EC2::VPCGatewayAttachment"
+    Properties: 
+      InternetGatewayId: !Ref InternetGateway
+      VpcId: !Ref VPC
+          
+          
+# ------------------------------------------------------------
+# Subnet
+# ------------------------------------------------------------
+### Public Subnet ###
+  PublicSubnet: 
+    Type: "AWS::EC2::Subnet"
+    Properties: 
+      AvailabilityZone: "ap-northeast-1a"
+      CidrBlock: !Ref PublicSubnetCIDR
+      VpcId: !Ref VPC 
+      Tags: 
+        - Key: Name
+          Value: !Sub "${PJPrefix}-PublicSubnet"
+          
+          
+# ------------------------------------------------------------
+# RouteTable
+# ------------------------------------------------------------
+### Public Subnet A Routing ###
+  PublicRTB: 
+    Type: "AWS::EC2::RouteTable"
+    Properties: 
+      VpcId: !Ref VPC 
+      Tags: 
+        - Key: Name
+          Value: !Sub "${PJPrefix}-PublicRouteA"
+
+  PublicSubnetRTBAssociation: 
+    Type: "AWS::EC2::SubnetRouteTableAssociation"
+    Properties: 
+      SubnetId: !Ref PublicSubnet 
+      RouteTableId: !Ref PublicRTB
+
+  PublicRoute: 
+    Type: "AWS::EC2::Route"
+    Properties: 
+      RouteTableId: !Ref PublicRTB
+      DestinationCidrBlock: "0.0.0.0/0"
+      GatewayId: !Ref InternetGateway
+      
+      
+# ------------------------------------------------------------
+# Output Parameter
+# ------------------------------------------------------------
+Outputs:
+### VPC ###
+  VPC:
+    Value: !Ref VPC
+      
+### Subnet ###
+## Public Subnet ##
+  PublicSubnet:
+    Value: !Ref PublicSubnet
