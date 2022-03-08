@@ -2,7 +2,7 @@
 CloudFormationのサンプルテンプレート格納リポジトリ
 
 ## リポジトリ説明
-- READMD.md
+- READMD.md<br>
 本書
 - AutoScaling-Demo<br>
 AutoScalingに対応したシンプルなWebサービスをデプロイするCloudFormationテンプレート
