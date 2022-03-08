@@ -4,11 +4,11 @@ CloudFormationのサンプルテンプレート格納リポジトリ
 ## リポジトリ説明
 - READMD.md
 本書
-- AutoScaling-Demo
+- AutoScaling-Demo<br>
 AutoScalingに対応したシンプルなWebサービスをデプロイするCloudFormationテンプレート
-- CI-Create-ChangeSet-demo
+- CI-Create-ChangeSet-demo<br>
 CodeCommitで管理しているCFnテンプレートの更新(push)から変更セットの作成までを自動化するCIのデモ
-- SorryPage-on-ALB
+- SorryPage-on-ALB<br>
 ALBでSorryページを表示させるデモ
 
 ***
