@@ -1,5 +1,13 @@
 {
  "Parameters": {
-  "PJPrefix": "CI-Create-ChangeSet-Demo"
+  "PJPrefix": "CI-Create-ChangeSet-Demo",
+  "CIDRVpc": "192.168.0.0/16",
+  "CIDRPublicSubnetA": "192.168.1.0/24",
+  "CIDRPublicSubnetC": "192.168.2.0/24",
+  "CIDRPrivateSubnetA": "192.168.3.0/24",
+  "CIDRPrivateSubnetC": "192.168.4.0/24",
+  "AMIId01": "AMI-ID",
+  "InstanceType": "t2.micro",
+  "KeyName": "SSH-KeyName"
  }
 }

@@ -1,7 +1,22 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Description: "Launch CI-Create-ChangeSet-demo"
     
-
+    
+# ------------------------------------------------------------
+#  Metadate
+# ------------------------------------------------------------
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Parameters:
+          - PJPrefix
+          - CIDRVpc
+          - CIDRPublicSubnetA
+          - CIDRPublicSubnetC
+          - CIDRPrivateSubnetA
+          - CIDRPrivateSubnetC
+          
+          
 # ------------------------------------------------------------
 # Input Parameters
 # ------------------------------------------------------------
@@ -10,13 +25,18 @@ Parameters:
   PJPrefix:
     Type: String
 ### VPC ###
-  VPCCIDR:
+  CIDRVpc:
     Type: String
-    Default: "192.168.0.0/20"
 ### Public Subnet ###
-  PublicSubnetCIDR:
+  CIDRPublicSubnetA:
     Type: String
-    Default: "192.168.1.0/24"
+  CIDRPublicSubnetC:
+    Type: String
+### Private Subnet ###
+  CIDRPrivateSubnetA:
+    Type: String
+  CIDRPrivateSubnetC:
+    Type: String
     
 
 ### Resources ###
@@ -27,7 +47,7 @@ Resources:
   VPC: 
     Type: "AWS::EC2::VPC"
     Properties: 
-      CidrBlock: !Ref VPCCIDR
+      CidrBlock: !Ref CIDRVpc
       EnableDnsSupport: "true"
       EnableDnsHostnames: "true"
       InstanceTenancy: default
@@ -54,44 +74,167 @@ Resources:
           
           
 # ------------------------------------------------------------
+# NatGateway
+# ------------------------------------------------------------
+### NAT Gateway ###
+  NatGateway:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId:
+        Fn::GetAtt:
+          - NatGatewayEIP
+          - AllocationId
+      SubnetId: !Ref PublicSubnetA
+      Tags:
+        - Key: Name
+          Value: !Sub "${PJPrefix}-NAT-Gateway"
+          
+### NAT Gateway EIP ###
+  NatGatewayEIP:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+      Tags:
+        - Key: Name
+          Value: !Sub "${PJPrefix}-NGW-EIP" 
+          
+          
+# ------------------------------------------------------------
 # Subnet
 # ------------------------------------------------------------
 ### Public Subnet ###
-  PublicSubnet: 
+  PublicSubnetA:
     Type: "AWS::EC2::Subnet"
     Properties: 
       AvailabilityZone: "ap-northeast-1a"
-      CidrBlock: !Ref PublicSubnetCIDR
+      CidrBlock: !Ref CIDRPublicSubnetA
       VpcId: !Ref VPC 
       Tags: 
         - Key: Name
-          Value: !Sub "${PJPrefix}-PublicSubnet"
+          Value: !Sub "${PJPrefix}-PublicSubnet-A"
+          
+  PublicSubnetC:
+    Type: "AWS::EC2::Subnet"
+    Properties: 
+      AvailabilityZone: "ap-northeast-1c"
+      CidrBlock: !Ref CIDRPublicSubnetC
+      VpcId: !Ref VPC 
+      Tags: 
+        - Key: Name
+          Value: !Sub "${PJPrefix}-PublicSubnet-C"
+          
+### Private Subnet ###
+  PrivateSubnetA:
+    Type: "AWS::EC2::Subnet"
+    Properties: 
+      AvailabilityZone: "ap-northeast-1a"
+      CidrBlock: !Ref CIDRPrivateSubnetA
+      VpcId: !Ref VPC 
+      Tags: 
+        - Key: Name
+          Value: !Sub "${PJPrefix}-PrivateSubnet-A"
+          
+  PrivateSubnetC:
+    Type: "AWS::EC2::Subnet"
+    Properties: 
+      AvailabilityZone: "ap-northeast-1c"
+      CidrBlock: !Ref CIDRPrivateSubnetC
+      VpcId: !Ref VPC 
+      Tags: 
+        - Key: Name
+          Value: !Sub "${PJPrefix}-PrivateSubnet-C"
           
           
 # ------------------------------------------------------------
 # RouteTable
 # ------------------------------------------------------------
-### Public Subnet A Routing ###
-  PublicRTB: 
+### PublicSubnetA Routing ###
+  RTBPublicA: 
     Type: "AWS::EC2::RouteTable"
     Properties: 
       VpcId: !Ref VPC 
       Tags: 
         - Key: Name
           Value: !Sub "${PJPrefix}-PublicRouteA"
-
-  PublicSubnetRTBAssociation: 
+          
+  RTBAssociationPublicA: 
     Type: "AWS::EC2::SubnetRouteTableAssociation"
     Properties: 
-      SubnetId: !Ref PublicSubnet 
-      RouteTableId: !Ref PublicRTB
-
-  PublicRoute: 
+      SubnetId: !Ref PublicSubnetA
+      RouteTableId: !Ref RTBPublicA
+      
+  RoutePublicA01: 
     Type: "AWS::EC2::Route"
     Properties: 
-      RouteTableId: !Ref PublicRTB
+      RouteTableId: !Ref RTBPrivateA
       DestinationCidrBlock: "0.0.0.0/0"
       GatewayId: !Ref InternetGateway
+      
+### PublicSubnetC Routing ###
+  RTBPublicC: 
+    Type: "AWS::EC2::RouteTable"
+    Properties: 
+      VpcId: !Ref VPC 
+      Tags: 
+        - Key: Name
+          Value: !Sub "${PJPrefix}-PublicRouteC"
+          
+  RTBAssociationPublicC: 
+    Type: "AWS::EC2::SubnetRouteTableAssociation"
+    Properties: 
+      SubnetId: !Ref PublicSubnetC
+      RouteTableId: !Ref RTBPublicC
+      
+  RoutePublicC01: 
+    Type: "AWS::EC2::Route"
+    Properties: 
+      RouteTableId: !Ref RTBPrivateC
+      DestinationCidrBlock: "0.0.0.0/0"
+      GatewayId: !Ref InternetGateway
+      
+### PrivateSubnetA Routing ###
+  RTBPrivateA: 
+    Type: "AWS::EC2::RouteTable"
+    Properties: 
+      VpcId: !Ref VPC 
+      Tags: 
+        - Key: Name
+          Value: !Sub "${PJPrefix}-PrivateRouteA"
+          
+  RTBAssociationPrivateA: 
+    Type: "AWS::EC2::SubnetRouteTableAssociation"
+    Properties: 
+      SubnetId: !Ref PrivateSubnetA
+      RouteTableId: !Ref RTBPrivateA
+      
+  RoutePrivateA01: 
+    Type: "AWS::EC2::Route"
+    Properties: 
+      RouteTableId: !Ref RTBPublicA
+      DestinationCidrBlock: "0.0.0.0/0"
+      NatGatewayId: !Ref NatGateway
+      
+### PrivateSubnetC Routing ###
+  RTBPrivateC: 
+    Type: "AWS::EC2::RouteTable"
+    Properties: 
+      VpcId: !Ref VPC 
+      Tags: 
+        - Key: Name
+          Value: !Sub "${PJPrefix}-PrivateRouteC"
+          
+  RTBAssociationPrivateC: 
+    Type: "AWS::EC2::SubnetRouteTableAssociation"
+    Properties: 
+      SubnetId: !Ref PrivateSubnetC
+      RouteTableId: !Ref RTBPrivateC
+      
+  RoutePrivateC01: 
+    Type: "AWS::EC2::Route"
+    Properties: 
+      RouteTableId: !Ref RTBPublicC
+      DestinationCidrBlock: "0.0.0.0/0"
+      NatGatewayId: !Ref NatGateway
       
       
 # ------------------------------------------------------------
@@ -103,6 +246,11 @@ Outputs:
     Value: !Ref VPC
       
 ### Subnet ###
-## Public Subnet ##
-  PublicSubnet:
-    Value: !Ref PublicSubnet
+  PublicSubnetA:
+    Value: !Ref PublicSubnetA
+  PublicSubnetC:
+    Value: !Ref PublicSubnetC
+  PrivateSubnetA:
+    Value: !Ref PrivateSubnetA
+  PrivateSubnetC:
+    Value: !Ref PrivateSubnetC

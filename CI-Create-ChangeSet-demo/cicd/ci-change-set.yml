@@ -40,7 +40,7 @@ Parameters:
     Default: "packaged.yml"
   BuildSpec:
     Type: String
-    Default: "codecomponent/buildspec.yml"
+    Default: "cicd/buildspec.yml"
     
     
 ### Resources ###
@@ -206,7 +206,6 @@ Resources:
 # CodePipline
 # ------------------------------------------------------------
 ### CodePipline(Branch→master)(Use→CI) ###
-# 2022/03/02：メモ 
 # CIまで、具体的にはChangeSetの作成までのパイプラインを通してる
   Pipeline:
     Type: AWS::CodePipeline::Pipeline

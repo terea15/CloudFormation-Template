@@ -3,6 +3,17 @@ Description: "Launch CI-Create-ChangeSet-demo"
 
 
 # ------------------------------------------------------------
+#  Metadate
+# ------------------------------------------------------------
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Parameters:
+          - PJPrefix
+          - VPC
+          
+          
+# ------------------------------------------------------------
 # Input Parameters
 # ------------------------------------------------------------
 Parameters:
@@ -18,21 +29,37 @@ Resources:
 # ------------------------------------------------------------
 # SecurityGroup
 # ------------------------------------------------------------
+### ALB Security Group ###
+  ALBSG:
+    Type: "AWS::EC2::SecurityGroup"
+    Properties:
+      GroupDescription: "ALB-SG"
+      GroupName: !Sub "${PJPrefix}-ALBSG"
+      VpcId: !Ref VPC
+      Tags: 
+        - Key: Name
+          Value: !Sub "${PJPrefix}-ALBSG"
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort : 80
+          ToPort : 80
+          CidrIp: 0.0.0.0/0
+          
 ### Web Server Security Group ###
-    WebSG:
-        Type: "AWS::EC2::SecurityGroup"
-        Properties:
-            GroupDescription: "https"
-            GroupName: !Sub "${PJPrefix}-WebSG"
-            VpcId: !Ref VPC
-            Tags: 
-                - Key: Name
-                  Value: !Sub "${PJPrefix}-WebSG"
-            SecurityGroupIngress:
-                IpProtocol: tcp
-                FromPort : 80
-                ToPort : 80
-                CidrIp: 0.0.0.0/0
+  WebSG:
+    Type: "AWS::EC2::SecurityGroup"
+    Properties:
+      GroupDescription: "WebServer-SG"
+      GroupName: !Sub "${PJPrefix}-WebSG"
+      VpcId: !Ref VPC
+      Tags: 
+        - Key: Name
+          Value: !Sub "${PJPrefix}-WebSG"
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort : 80
+          ToPort : 80
+          SourceSecurityGroupId: !Ref ALBSG
                 
                 
 # ------------------------------------------------------------
@@ -40,5 +67,7 @@ Resources:
 # ------------------------------------------------------------
 Outputs:
 ### SecurityGroup ###
-    WebSG:
-        Value: !Ref WebSG
+  ALBSG:
+    Value: !Ref ALBSG
+  WebSG:
+    Value: !Ref WebSG

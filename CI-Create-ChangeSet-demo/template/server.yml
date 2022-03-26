@@ -1,18 +1,38 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Description: "Launch CI-Create-ChangeSet-demo"
 
-
+# ------------------------------------------------------------
+#  Metadate
+# ------------------------------------------------------------
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Parameters:
+          - PJPrefix
+          - SubnetIdPriA
+          - SubnetIdPriC
+          - AMIId01
+          - InstanceType
+          - KeyName
+          
+          
 # ------------------------------------------------------------
 # Input Parameters
 # ------------------------------------------------------------
 Parameters:
   PJPrefix:
     Type: String
-  VPC:
+  SubnetIdPriA:
     Type: String
-  PublicSubnet:
+  SubnetIdPriC:
     Type: String
   WebSG:
+    Type: String
+  AMIId01:
+    Type: String
+  InstanceType:
+    Type: String
+  KeyName:
     Type: String
     
     
@@ -22,26 +42,55 @@ Resources:
 # EC2
 # ------------------------------------------------------------
 ### AvailabilityZone-A ###
-  EC2Web: 
+  EC2WebAzA: 
     Type: AWS::EC2::Instance
     Properties: 
-      ImageId: ami-07b4f72c4c356c19d
-      InstanceType: t2.micro
-      IamInstanceProfile: !Ref SSMRoleProfile
+      ImageId: !Ref AMIId01
+      InstanceType: !Ref InstanceType
+      KeyName: !Ref KeyName
       NetworkInterfaces: 
-        - AssociatePublicIpAddress: "true"
+        - AssociatePublicIpAddress: "false"
           DeviceIndex: "0"
-          SubnetId: !Ref PublicSubnet
+          SubnetId: !Ref SubnetIdPriA
           GroupSet:
             - !Ref WebSG
       UserData:
         Fn::Base64: !Sub |
           #!/bin/bash
+          ## Update yum
           sudo yum -y update
+          ## Install httpd by yum
           sudo yum -y install httpd
           sudo systemctl start httpd
           sudo systemctl enable httpd
-          sudo echo "Success Page" > /var/www/html/index.html
+          sudo echo "Success Page AZ-A" > /var/www/html/index.html
       Tags:
           - Key: Name
-            Value: !Sub "${PJPrefix}-WebServer"
+            Value: !Sub "${PJPrefix}-WebServer-A"
+            
+### AvailabilityZone-A ###
+  EC2WebAzC: 
+    Type: AWS::EC2::Instance
+    Properties: 
+      ImageId: !Ref AMIId01
+      InstanceType: !Ref InstanceType
+      KeyName: !Ref KeyName
+      NetworkInterfaces: 
+        - AssociatePublicIpAddress: "false"
+          DeviceIndex: "0"
+          SubnetId: !Ref SubnetIdPriC
+          GroupSet:
+            - !Ref WebSG
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          ## Update yum
+          sudo yum -y update
+          ## Install httpd by yum
+          sudo yum -y install httpd
+          sudo systemctl start httpd
+          sudo systemctl enable httpd
+          sudo echo "Success Page AZ-C" > /var/www/html/index.html
+      Tags:
+          - Key: Name
+            Value: !Sub "${PJPrefix}-WebServer-C"

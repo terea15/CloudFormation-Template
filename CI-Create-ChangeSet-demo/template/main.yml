@@ -5,8 +5,29 @@ Description: "Launch CI-Create-ChangeSet-demo"
 # ------------------------------------------------------------
 # Input Parameters
 # ------------------------------------------------------------
-Parameters: 
+Parameters:
+# param.jsonからパラメータを取得する
+# 共通パラメータはparam.jsonにて値を指定すること
+### Share param ###
   PJPrefix:
+    Type: String
+### NW param ###
+  CIDRVpc:
+    Type: String
+  CIDRPublicSubnetA:
+    Type: String
+  CIDRPublicSubnetC:
+    Type: String
+  CIDRPrivateSubnetA:
+    Type: String
+  CIDRPrivateSubnetC:
+    Type: String
+### EC2 param ###
+  AMIId01:
+    Type: String
+  InstanceType:
+    Type: String
+  KeyName:
     Type: String
     
     
@@ -21,6 +42,11 @@ Resources:
       TemplateURL: "network.yml"
       Parameters:
         PJPrefix: !Ref PJPrefix
+        CIDRVpc: !Ref CIDRVpc
+        CIDRPublicSubnetA: !Ref CIDRPublicSubnetA
+        CIDRPublicSubnetC: !Ref CIDRPublicSubnetC
+        CIDRPrivateSubnetA: !Ref CIDRPrivateSubnetA
+        CIDRPrivateSubnetC: !Ref CIDRPrivateSubnetC
         
   SG:
     Type: AWS::CloudFormation::Stack
@@ -38,6 +64,21 @@ Resources:
       TemplateURL: "server.yml"
       Parameters: 
         PJPrefix: !Ref PJPrefix
-        VPC: !GetAtt NW.Outputs.VPC
-        SubnetId: !GetAtt NW.Outputs.PublicSubnet
+        SubnetIdPriA: !GetAtt NW.Outputs.PrivateSubnetA
+        SubnetIdPriC: !GetAtt NW.Outputs.PrivateSubnetC
         WebSG: !GetAtt SG.Outputs.WebSG
+        AMIId01: !Ref AMIId01
+        InstanceType: !Ref InstanceType
+        KeyName: !Ref KeyName
+        
+  LB:
+    Type: AWS::CloudFormation::Stack
+    DependsOn: EC2
+    Properties:
+      TemplateURL: "lb.yml"
+      Parameters: 
+        PJPrefix: !Ref PJPrefix
+        VPCId: !GetAtt NW.Outputs.VPC
+        SubnetIdPubA: !GetAtt NW.Outputs.PublicSubnetA
+        SubnetIdPubC: !GetAtt NW.Outputs.PublicSubnetC
+        ALBSG: !GetAtt SG.Outputs.ALBSG

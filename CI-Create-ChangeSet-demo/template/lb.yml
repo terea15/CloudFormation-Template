@@ -1,0 +1,105 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: "Launch CI-Create-ChangeSet-demo"
+
+
+# ------------------------------------------------------------
+#  Metadate
+# ------------------------------------------------------------
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Parameters:
+          - PJPrefix
+          - ALBSG
+          - SubnetIdPubA
+          - SubnetIdPubC
+          - VPCId
+          
+          
+# ------------------------------------------------------------
+# Input Parameters
+# ------------------------------------------------------------
+Parameters:
+  PJPrefix:
+    Type: String
+  SubnetIdPubA:
+    Type: String
+  SubnetIdPubC:
+    Type: String
+  ALBSG:
+    Type: AWS::EC2::SecurityGroup::Id
+  VPCId:
+    Type: String
+    
+    
+### Resources ###
+Resources: 
+# ------------------------------------------------------------
+# Target Group
+# ------------------------------------------------------------
+  TargetGroup:
+    Type: "AWS::ElasticLoadBalancingV2::TargetGroup"
+    Properties: 
+      VpcId: !Ref VPCId
+      Name: !Sub "${PJPrefix}-TargetGroup"
+      Protocol: HTTP
+      Port: 80
+      HealthCheckProtocol: HTTP
+      HealthCheckPath: "/"
+      HealthCheckPort: "traffic-port"
+      HealthyThresholdCount: 2
+      UnhealthyThresholdCount: 2
+      HealthCheckTimeoutSeconds: 5
+      HealthCheckIntervalSeconds: 10
+      Matcher: 
+        HttpCode: 200
+      Tags: 
+        - Key: Name
+          Value: !Sub "${PJPrefix}-TG"
+      TargetGroupAttributes: 
+        - Key: "deregistration_delay.timeout_seconds"
+          Value: 300
+        - Key: "stickiness.enabled"
+          Value: false
+        - Key: "stickiness.type"
+          Value: lb_cookie
+        - Key: "stickiness.lb_cookie.duration_seconds"
+          Value: 86400
+          
+          
+# ------------------------------------------------------------
+#  ALB
+# ------------------------------------------------------------
+### ALB ###
+  ALB:
+    Type: "AWS::ElasticLoadBalancingV2::LoadBalancer"
+    Properties:
+      Name: !Sub "${PJPrefix}-ALB"
+      Tags:
+        - Key: Name
+          Value: !Sub "${PJPrefix}-ALB"
+      Scheme: "internet-facing"
+      LoadBalancerAttributes:
+        - Key: "deletion_protection.enabled"
+          Value: false
+        - Key: "idle_timeout.timeout_seconds"
+          Value: 60
+        - Key: "access_logs.s3.enabled"
+          Value: false
+      SecurityGroups:
+        - !Ref "ALBSG"
+      Subnets: 
+        - !Ref "SubnetIdPubA"
+        - !Ref "SubnetIdPubC"
+        
+        
+### HTTP Listener ###
+  ALBListener: 
+    Type: "AWS::ElasticLoadBalancingV2::Listener"
+    Properties: 
+      DefaultActions:
+        - TargetGroupArn: !Ref TargetGroup
+          Type: forward
+      LoadBalancerArn: !Ref ALB
+      Port: 80
+      Protocol: HTTP
