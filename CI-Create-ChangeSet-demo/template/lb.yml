@@ -55,7 +55,7 @@ Resources:
         HttpCode: 200
       Tags: 
         - Key: Name
-          Value: !Sub "${PJPrefix}-TG"
+          Value: !Sub "${PJPrefix}-TaretGroup"
       TargetGroupAttributes: 
         - Key: "deregistration_delay.timeout_seconds"
           Value: 300
