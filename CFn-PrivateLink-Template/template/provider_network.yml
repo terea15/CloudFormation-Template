@@ -1,0 +1,98 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "Create Provider-Network-Env to PrivateLink-PrivateWeb-dev-Env"
+    
+# ------------------------------------------------------------
+#  Metadate
+# ------------------------------------------------------------
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Parameters:
+          - PJPrefix
+          - VPCCIDR
+          - PrivateSubnetCIDR
+          
+          
+# ------------------------------------------------------------
+# Input Parameters
+# ------------------------------------------------------------
+Parameters:
+### Project Prefix ###
+  PJPrefix:
+    Type: String
+### VPC ###
+  VPCCIDR:
+    Type: String
+    Default: "192.168.0.0/20"
+### Private Subnet ###
+  PrivateSubnetCIDR:
+    Type: String
+    Default: "192.168.1.0/24"
+    
+    
+### Resources ###
+Resources: 
+# ------------------------------------------------------------
+# VPC
+# ------------------------------------------------------------
+  VPC: 
+    Type: "AWS::EC2::VPC"
+    Properties: 
+      CidrBlock: !Ref VPCCIDR
+      EnableDnsSupport: "true"
+      EnableDnsHostnames: "true"
+      InstanceTenancy: default
+      Tags: 
+        - Key: Name
+          Value: !Sub "${PJPrefix}-Provider-VPC"
+          
+          
+# ------------------------------------------------------------
+# Subnet
+# ------------------------------------------------------------
+### Private Subnet ###
+  PrivateSubnet: 
+    Type: "AWS::EC2::Subnet"
+    Properties: 
+      AvailabilityZone: "ap-northeast-1a"
+      CidrBlock: !Ref PrivateSubnetCIDR
+      VpcId: !Ref VPC 
+      Tags: 
+        - Key: Name
+          Value: !Sub "${PJPrefix}-Provider-PrivateSubnet"
+          
+          
+# ------------------------------------------------------------
+# RouteTable
+# ------------------------------------------------------------
+### Privatec Subnet Routing ###
+  PrivateRTB: 
+    Type: "AWS::EC2::RouteTable"
+    Properties: 
+      VpcId: !Ref VPC 
+      Tags: 
+        - Key: Name
+          Value: !Sub "${PJPrefix}-Provider-PrivateRoute"
+
+  PrivateSubnetRTBAssociation: 
+    Type: "AWS::EC2::SubnetRouteTableAssociation"
+    Properties: 
+      SubnetId: !Ref PrivateSubnet 
+      RouteTableId: !Ref PrivateRTB
+      
+      
+# ------------------------------------------------------------
+# Output Parameter
+# ------------------------------------------------------------
+Outputs:
+### VPC ###
+  VPC:
+    Value: !Ref VPC
+    Export:
+      Name: !Sub "${PJPrefix}-Provider-VPC"
+      
+### Private Subnet ###
+  PrivateSubnet:
+    Value: !Ref PrivateSubnet
+    Export:
+      Name: !Sub "${PJPrefix}-Provider-PrivateSubnet"

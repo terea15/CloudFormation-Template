@@ -1,0 +1,91 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "Create Client-Server-Env to PrivateLink-PrivateWeb-dev-Env"
+    
+# ------------------------------------------------------------
+#  Metadate
+# ------------------------------------------------------------
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Parameters:
+          - PJPrefix
+          - EC2AMI
+          - InstanceType
+          - KeyName
+          
+          
+# ------------------------------------------------------------
+# Input Parameters
+# ------------------------------------------------------------
+Parameters:
+### Project Prefix ###
+  PJPrefix:
+    Type: 'String'
+  EC2AMI:
+    Type: 'String'
+  InstanceType:
+    Type: 'String'
+  KeyName:
+    Type: 'AWS::EC2::KeyPair::KeyName'
+    
+    
+### Resources ###
+Resources:
+# ------------------------------------------------------------
+# SecurityGroup
+# ------------------------------------------------------------
+### WebServer Security Group ###
+  ClientSG:
+    Type: "AWS::EC2::SecurityGroup"
+    Properties:
+      GroupDescription: "http"
+      GroupName: !Sub "${PJPrefix}-Client-SG"
+      VpcId: { "Fn::ImportValue": !Sub "${PJPrefix}-Client-VPC" }
+      Tags: 
+         - Key: Name
+           Value: !Sub "${PJPrefix}-Client-SG"
+      SecurityGroupIngress:
+         - IpProtocol: tcp
+           FromPort : 22
+           ToPort : 22
+           CidrIp: 0.0.0.0/0
+         - IpProtocol: tcp
+           FromPort : 80
+           ToPort : 80
+           CidrIp: 0.0.0.0/0
+                
+                
+# ------------------------------------------------------------
+# EC2
+# ------------------------------------------------------------
+### ClientServer ###
+  ClientServer:
+    Type: AWS::EC2::Instance
+    Properties: 
+      ImageId: !Ref EC2AMI
+      InstanceType: !Ref InstanceType 
+      KeyName: !Ref KeyName
+      NetworkInterfaces: 
+        - AssociatePublicIpAddress: "false"
+          DeviceIndex: "0"
+          SubnetId: { "Fn::ImportValue": !Sub "${PJPrefix}-Client-PrivateSubnet" }
+          GroupSet:
+            - !Ref ClientSG
+      Tags:
+        - Key: Name
+          Value: !Sub "${PJPrefix}-ClientServer"
+            
+            
+# ------------------------------------------------------------
+# EndPoint
+# ------------------------------------------------------------
+  VpcEndpoint:
+    Type: "AWS::EC2::VPCEndpoint"
+    Properties:
+      VpcId: { "Fn::ImportValue": !Sub "${PJPrefix}-Client-VPC" }
+      ServiceName: { "Fn::ImportValue": !Sub "${PJPrefix}-VPCEndpointService" }
+      VpcEndpointType: "Interface"
+      SubnetIds: 
+         - { "Fn::ImportValue": !Sub "${PJPrefix}-Client-PrivateSubnet" }
+      SecurityGroupIds:
+        - !Ref ClientSG

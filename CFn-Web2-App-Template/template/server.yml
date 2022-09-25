@@ -1,0 +1,256 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Web2tier-Server-Template
+
+
+# ------------------------------------------------------------
+# Input Parameters
+# ------------------------------------------------------------
+Parameters:
+### Project Prefix ###
+  PJPrefix:
+    Type: String
+### Key pair ###
+  KeyName:
+    Description: input EC2 Keyname
+    Type: 'AWS::EC2::KeyPair::KeyName'
+### Hosted Zone ###
+  HostedZoneName:
+    Type: String
+    Description: DNS Name to create
+    Default: '<<ドメイン(example.com)>>'
+    AllowedPattern: (?!-)[a-zA-Z0-9-.]{1,63}(?<!-)
+    ConstraintDescription: must be a valid DNS zone name
+  SubDomain:
+    Description: FQDN of the certificate
+    Type: String
+    Default: 'www.<<ドメイン(example.com)>>'
+    
+    
+### Resources ###
+Resources: 
+# ------------------------------------------------------------
+# IAM Role
+# ------------------------------------------------------------
+  SSMRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Path: /
+      RoleName: !Sub "${PJPrefix}-SSMRole"
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      MaxSessionDuration: 3600
+      ManagedPolicyArns: 
+        - arn:aws:iam::aws:policy/service-role/AmazonEC2RoleforSSM
+
+  SSMRoleProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Path: /
+      Roles:
+        - !Ref SSMRole
+        
+        
+# ------------------------------------------------------------
+# EC2
+# ------------------------------------------------------------
+### AvailabilityZone-A ###
+  EC2WebA: 
+    Type: AWS::EC2::Instance
+    Properties: 
+      ImageId: ami-032d6db78f84e8bf5
+      InstanceType: t2.micro
+      IamInstanceProfile: !Ref SSMRoleProfile
+      KeyName: !Ref KeyName
+      NetworkInterfaces: 
+        - AssociatePublicIpAddress: "true"
+          DeviceIndex: "0"
+          SubnetId: { "Fn::ImportValue": !Sub "${PJPrefix}-private-subnet-a" }
+          GroupSet:
+            - { "Fn::ImportValue": !Sub "${PJPrefix}-web-sg" }
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          sudo yum -y update
+          sudo yum -y install httpd
+          sudo systemctl start httpd
+          sudo systemctl enable httpd
+          sudo echo "chibiharu's Qiita Apache Test Page For Success AZ-a" > /var/www/html/index.html
+          sudo systemctl start amazon-ssm-agent.service
+          sudo systemctl enable amazon-ssm-agent.service
+      Tags:
+          - Key: Name
+            Value: !Sub "${PJPrefix}-web-server-1a"
+            
+### AvailabilityZone-C ###
+  EC2WebC: 
+    Type: AWS::EC2::Instance
+    Properties: 
+      ImageId: ami-032d6db78f84e8bf5
+      InstanceType: t2.micro
+      IamInstanceProfile: !Ref SSMRoleProfile
+      KeyName: !Ref KeyName
+      NetworkInterfaces: 
+        - AssociatePublicIpAddress: "true"
+          DeviceIndex: "0"
+          SubnetId: { "Fn::ImportValue": !Sub "${PJPrefix}-private-subnet-c" }
+          GroupSet:
+            - { "Fn::ImportValue": !Sub "${PJPrefix}-web-sg" }
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          sudo yum -y update
+          sudo yum -y install httpd
+          sudo systemctl start httpd
+          sudo systemctl enable httpd
+          sudo echo "chibiharu's Qiita Apache Test Page For Success AZ-c" > /var/www/html/index.html
+          sudo systemctl start amazon-ssm-agent.service
+          sudo systemctl enable amazon-ssm-agent.service
+      Tags:
+          - Key: Name
+            Value: !Sub "${PJPrefix}-web-server-1c"
+            
+            
+# ------------------------------------------------------------
+# Target Group
+# ------------------------------------------------------------
+  TargetGroup:
+    Type: "AWS::ElasticLoadBalancingV2::TargetGroup"
+    Properties: 
+      VpcId: { "Fn::ImportValue": !Sub "${PJPrefix}-vpc" } 
+      Name: !Sub "${PJPrefix}-tg"
+      Protocol: HTTP
+      Port: 80
+      HealthCheckProtocol: HTTP
+      HealthCheckPath: "/"
+      HealthCheckPort: "traffic-port"
+      HealthyThresholdCount: 2
+      UnhealthyThresholdCount: 2
+      HealthCheckTimeoutSeconds: 5
+      HealthCheckIntervalSeconds: 10
+      Matcher: 
+        HttpCode: 200
+      Tags: 
+        - Key: Name
+          Value: !Sub "${PJPrefix}-${ALB}-tg"
+      TargetGroupAttributes: 
+        - Key: "deregistration_delay.timeout_seconds"
+          Value: 300
+        - Key: "stickiness.enabled"
+          Value: false
+        - Key: "stickiness.type"
+          Value: lb_cookie
+        - Key: "stickiness.lb_cookie.duration_seconds"
+          Value: 86400
+      Targets: 
+        - Id: !Ref EC2WebA
+        - Id: !Ref EC2WebC
+          Port: 80
+          
+          
+# ------------------------------------------------------------
+# Application Load balancer
+# ------------------------------------------------------------
+### ALB ###
+  ALB: 
+    Type: "AWS::ElasticLoadBalancingV2::LoadBalancer"
+    Properties: 
+      Name: !Sub "${PJPrefix}-alb"
+      Scheme: "internet-facing"
+      LoadBalancerAttributes: 
+        - Key: "deletion_protection.enabled"
+          Value: false
+        - Key: "idle_timeout.timeout_seconds"
+          Value: 4000
+      SecurityGroups:
+        - { "Fn::ImportValue": !Sub "${PJPrefix}-alb-sg" } 
+      Subnets: 
+        - { "Fn::ImportValue": !Sub "${PJPrefix}-public-subnet-a" } 
+        - { "Fn::ImportValue": !Sub "${PJPrefix}-public-subnet-c" }
+        
+### Listener HTTP ###
+  ALBListenerHTTP: 
+    Type: "AWS::ElasticLoadBalancingV2::Listener"
+    Properties: 
+      Port: 80
+      Protocol: HTTP
+      DefaultActions: 
+        - Type: redirect
+          RedirectConfig: 
+            Host: '#{host}'
+            Path: '/#{path}'
+            Port: 443
+            Protocol: HTTPS
+            Query: '#{query}'
+            StatusCode: HTTP_301
+      LoadBalancerArn: !Ref ALB
+      
+### Listener HTTPS ###
+  ALBListenerHTTPS:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      Port: 443
+      Protocol: HTTPS
+      Certificates:
+        - CertificateArn: !Ref ACM
+      DefaultActions:
+        - TargetGroupArn: !Ref TargetGroup
+          Type: forward
+      LoadBalancerArn: !Ref ALB
+      
+      
+# ------------------------------------------------------------
+# Route53
+# ------------------------------------------------------------
+  HostedZone:
+    Type: AWS::Route53::HostedZone
+    Properties:
+      Name: !Ref HostedZoneName
+      HostedZoneTags:
+      - Key: Name
+        Value: !Sub "${PJPrefix}-cfn-hostedzone"
+        
+  DNSRecord:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneId: !Sub '${HostedZone}'
+      Comment: "alias to alb"
+      Name: !Sub '${SubDomain}'
+      Type: A
+      AliasTarget:
+        HostedZoneId: !GetAtt 'ALB.CanonicalHostedZoneID'
+        DNSName: !GetAtt 'ALB.DNSName'
+        
+        
+# ------------------------------------------------------------
+# ACM
+# ------------------------------------------------------------
+  ACM:
+    Type: AWS::CertificateManager::Certificate
+    Properties:
+      DomainName: !Sub '${SubDomain}'
+      DomainValidationOptions:
+        - DomainName: !Sub '${SubDomain}'
+          HostedZoneId: !Sub '${HostedZone}'
+      ValidationMethod: DNS
+      
+      
+# ------------------------------------------------------------
+# Output Parameter
+# ------------------------------------------------------------
+Outputs:
+### EC2 ###
+  EC2WebA:
+    Value: !Ref EC2WebA
+    Export:
+      Name: !Sub "${PJPrefix}-web-server-1a"
+  EC2WebC:
+    Value: !Ref EC2WebC
+    Export:
+      Name: !Sub "${PJPrefix}-web-server-1c"

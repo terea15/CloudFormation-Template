@@ -1,0 +1,135 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "Create Provider-Server-Env to PrivateLink-PrivateWeb-dev-Env"
+    
+# ------------------------------------------------------------
+#  Metadate
+# ------------------------------------------------------------
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Parameters:
+          - PJPrefix
+          - EC2AMI
+          
+          
+# ------------------------------------------------------------
+# Input Parameters
+# ------------------------------------------------------------
+Parameters:
+### Project Prefix ###
+  PJPrefix:
+    Type: 'String'
+  EC2AMI:
+    Type: 'String'
+  InstanceType:
+    Type: 'String'
+    
+    
+### Resources ###
+Resources:
+# ------------------------------------------------------------
+# SecurityGroup
+# ------------------------------------------------------------
+### WebServer Security Group ###
+  WebSG:
+    Type: "AWS::EC2::SecurityGroup"
+    Properties:
+      GroupDescription: "http"
+      GroupName: !Sub "${PJPrefix}-Web-SG"
+      VpcId: { "Fn::ImportValue": !Sub "${PJPrefix}-Provider-VPC" }
+      Tags: 
+         - Key: Name
+           Value: !Sub "${PJPrefix}-Provider-Web-SG"
+      SecurityGroupIngress:
+         - IpProtocol: tcp
+           FromPort : 80
+           ToPort : 80
+           CidrIp: 0.0.0.0/0
+                
+                
+# ------------------------------------------------------------
+# EC2
+# ------------------------------------------------------------
+### WebServer ###
+  WebServerA:
+    Type: AWS::EC2::Instance
+    Properties: 
+      ImageId: !Ref EC2AMI
+      InstanceType: !Ref InstanceType 
+      NetworkInterfaces: 
+        - AssociatePublicIpAddress: "false"
+          DeviceIndex: "0"
+          SubnetId: { "Fn::ImportValue": !Sub "${PJPrefix}-Provider-PrivateSubnet" }
+          GroupSet:
+            - !Ref WebSG
+      Tags:
+        - Key: Name
+          Value: !Sub "${PJPrefix}-Provider-WebServerA"
+          
+            
+# ------------------------------------------------------------
+# TargetGroup
+# ------------------------------------------------------------
+  TargetGroup: 
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties: 
+      VpcId:  { "Fn::ImportValue": !Sub "${PJPrefix}-Provider-VPC" }
+      Name: !Sub "${PJPrefix}-Provider-TG"
+      Protocol: TCP
+      Port: 80
+      Tags: 
+        - Key: Name
+          Value: !Sub "${PJPrefix}-Provider-TG"
+      Targets: 
+        - Id: !Ref WebServerA
+          Port: 80
+          
+          
+# ------------------------------------------------------------
+# NetworkLoadBalancer
+# ------------------------------------------------------------
+  NLB: 
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties: 
+      Name: !Sub "${PJPrefix}-Provider-NLB"
+      Tags: 
+        - Key: Name
+          Value: !Sub "${PJPrefix}-Provider-NLB"
+      Scheme: "internal"
+      LoadBalancerAttributes: 
+        - Key: "deletion_protection.enabled"
+          Value: false
+      Subnets: 
+        -  { "Fn::ImportValue": !Sub "${PJPrefix}-Provider-PrivateSubnet" }
+      Type: network
+      
+  NLBListenerHTTP: 
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties: 
+      DefaultActions: 
+        - TargetGroupArn: !Ref TargetGroup
+          Type: forward
+      LoadBalancerArn: !Ref NLB
+      Port: 80
+      Protocol: TCP
+      
+      
+# ------------------------------------------------------------
+# EndPointService
+# ------------------------------------------------------------
+  VPCEndpointService:
+    Type: AWS::EC2::VPCEndpointService
+    Properties: 
+      AcceptanceRequired: true
+      NetworkLoadBalancerArns:
+        - !Ref NLB
+          
+          
+# ------------------------------------------------------------
+# Output Parameters
+# ------------------------------------------------------------
+Outputs:
+  VPCEndpointService:
+    Value: { "Fn::Sub": "com.amazonaws.vpce.${AWS::Region}.${VPCEndpointService}" }
+    Export:
+      Name: !Sub "${PJPrefix}-VPCEndpointService"

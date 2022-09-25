@@ -1,0 +1,84 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Web2tier-Security-Template
+
+
+# ------------------------------------------------------------
+# Input Parameters
+# ------------------------------------------------------------
+Parameters:
+### Project Prefix ###
+  PJPrefix:
+    Type: String
+    
+
+### Resources ###
+Resources:
+# ------------------------------------------------------------
+# SecurityGroup
+# ------------------------------------------------------------
+### ALB Server Security Group ###
+    ALBSG:
+        Type: "AWS::EC2::SecurityGroup"
+        Properties:
+            GroupDescription: "https"
+            GroupName: cfn-dev-alb-sg
+            VpcId: { "Fn::ImportValue": !Sub "${PJPrefix}-vpc" }
+            Tags: 
+                - Key: Name
+                  Value: !Sub "${PJPrefix}-alb-sg"
+            SecurityGroupIngress:
+                IpProtocol: tcp
+                FromPort : 443
+                ToPort : 443
+                CidrIp: 0.0.0.0/0
+                
+### Web Server Security Group ###
+    WebSG:
+        Type: "AWS::EC2::SecurityGroup"
+        Properties:
+            GroupDescription: "http"
+            GroupName: cfn-dev-web-sg
+            VpcId: { "Fn::ImportValue": !Sub "${PJPrefix}-vpc" }
+            Tags: 
+                - Key: Name
+                  Value: !Sub "${PJPrefix}-web-sg"
+            SecurityGroupIngress:
+                IpProtocol: tcp
+                FromPort : 80
+                ToPort : 80
+                SourceSecurityGroupId: !Ref ALBSG
+                
+### RDS Security Group ###            
+    RDSSG:
+        Type: "AWS::EC2::SecurityGroup"
+        Properties:
+            GroupDescription: "mysql"
+            GroupName: cfn-dev-rds-sg
+            VpcId: { "Fn::ImportValue": !Sub "${PJPrefix}-vpc" }
+            Tags: 
+                - Key: Name
+                  Value: !Sub "${PJPrefix}-RDS-sg"
+            SecurityGroupIngress:
+                IpProtocol: tcp
+                FromPort : 3306
+                ToPort : 3306
+                SourceSecurityGroupId: !Ref WebSG
+                
+                
+# ------------------------------------------------------------
+# Output Parameter
+# ------------------------------------------------------------
+Outputs:
+### SecurityGroup ###
+    ALBSG:
+        Value: !Ref ALBSG
+        Export:
+            Name: !Sub "${PJPrefix}-alb-sg"
+    WebSG:
+        Value: !Ref WebSG
+        Export:
+            Name: !Sub "${PJPrefix}-web-sg"
+    RDSSG:
+        Value: !Ref RDSSG
+        Export:
+            Name: !Sub "${PJPrefix}-rds-sg"
