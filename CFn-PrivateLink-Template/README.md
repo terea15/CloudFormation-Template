@@ -1,9 +1,9 @@
 # PrivateWeb-PrivateLink-dev-Env
 ## 説明
-異なるVPC間でプライベートリンクを経由して接続可能なWeb環境を構築するCloudFormationテンプレートのデモ
+異なるVPC間でのPrivateLinkを介したエンドポイント疎通デモ環境を構築するCloudFormationテンプレート
 
 ## 構成図
-![Privatelink-handson-web-env](https://user-images.githubusercontent.com/60125692/154089840-c1c6f65f-e84a-478a-95cb-8f4df0d46adb.png)
+![Qiita_chibiharu_PrivateLink](https://user-images.githubusercontent.com/60125692/194769145-0f37e86b-f2f0-463b-b34e-9d5c6b534aae.png)
 
 
 ## ディレクトリ説明
@@ -14,4 +14,4 @@
 
 ## 使用方法
 以下記事を参照<br>
-- [【AWS】PrivateLinkを利用した閉域網なWeb環境をCloudFormationで構築]()
+- [【AWS】PrivateLinkをCloudFormationで構築する](https://chibinfra-techblog.com/privatelink-qiita-how-to/)
