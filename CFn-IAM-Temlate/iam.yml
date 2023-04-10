@@ -1,0 +1,130 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "Create a CFn Template IAM Settings By chibiharu"
+
+# ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+#  Metadate
+# ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Parameters:
+          - AdminUserGroupName
+          - PowerUserGroupName
+          - ReadOnlyUserGroupName
+          - AdminUserName
+          - PowerUserName
+          - ReadOnlyUserName
+          - InitPasswd
+
+
+# ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# Input Parameters
+# ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Parameters:
+### IAM Group ###
+  AdminUserGroupName:
+    Type: String
+    Default: CFn-Sample-AdminUserGroup
+    Description: IAM-Group To AdminUserGroup
+  PowerUserGroupName:
+    Type: String
+    Default: CFn-Sample-PowerUserGroup
+    Description: IAM-Group To PowerUserGroup
+  ReadOnlyUserGroupName:
+    Type: String
+    Default: CFn-Sample-ReadOnlyUserGroup
+    Description: IAM-Group To ReadOnlyUserGroup
+### IAM User ###
+  AdminUserName:
+    Type: String
+    Default: CFn-Sample-ReadOnlyUser
+    Description: IAM-User To AdminUser
+  PowerUserName:
+    Type: String
+    Default: CFn-Sample-ReadOnlyUser
+    Description: IAM-User To PowerUser
+  ReadOnlyUserName:
+    Type: String
+    Default: CFn-Sample-ReadOnlyUser
+    Description: IAM-User To ReadOnlyUser
+### Other ###
+  InitPasswd:
+    Type: String
+    Description: Init Password
+    NoEcho: True
+
+
+# ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# Resources
+# ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Resources: 
+  # ------------------------------------------------------------
+  # IAM Group
+  # ------------------------------------------------------------
+  AdminUserGroup:
+    Type: AWS::IAM::Group
+    Properties:
+      GroupName: !Ref AdminUserGroupName
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AdministratorAccess
+  PowerUserGroup:
+    Type: AWS::IAM::Group
+    Properties:
+      GroupName: !Ref PowerUserGroupName
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/PowerUserAccess
+  ReadOnlyUserGroup:
+    Type: AWS::IAM::Group
+    Properties:
+      GroupName: !Ref ReadOnlyUserGroupName
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/ReadOnlyAccess
+
+  # ------------------------------------------------------------
+  # IAM User
+  # ------------------------------------------------------------
+  AdminUser:
+    Type: AWS::IAM::User
+    Properties:
+      UserName: !Ref AdminUserName
+      Groups:
+        - !Ref AdminUserGroupName
+      LoginProfile:
+        Password: !Ref InitPasswd
+        PasswordResetRequired: true
+  PowerUser:
+    Type: AWS::IAM::User
+    Properties:
+      UserName: !Ref PowerUserName
+      Groups:
+        - !Ref PowerUserGroupName
+      LoginProfile:
+        Password: !Ref InitPasswd
+        PasswordResetRequired: true
+  ReadOnlyUser:
+    Type: AWS::IAM::User
+    Properties:
+      UserName: !Ref ReadOnlyUserName
+      Groups:
+        - !Ref ReadOnlyUserGroupName
+      LoginProfile:
+        Password: !Ref InitPasswd
+        PasswordResetRequired: true
+
+
+# ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# Output Parameter
+# ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Outputs:
+  AdominUserName:
+    Description: IAM-User To AdminUser
+    Value: !Ref AdminUserName
+  PowerUserGroupName:
+    Description: IAM-User To PowerUser
+    Value: !Ref PowerUserName
+  ReadOnlyUserName:
+    Description: IAM-User To ReadOnlyUser
+    Value: !Ref ReadOnlyUserName
+  LoginURL:
+    Description: AWSLoginURL
+    Value: !Join ["", ["https://", !Ref AWS::AccountId, ".signin.aws.amazon.com/console"]]
