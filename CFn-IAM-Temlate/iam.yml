@@ -37,11 +37,11 @@ Parameters:
 ### IAM User ###
   AdminUserName:
     Type: String
-    Default: CFn-Sample-ReadOnlyUser
+    Default: CFn-Sample-AdminUser
     Description: IAM-User To AdminUser
   PowerUserName:
     Type: String
-    Default: CFn-Sample-ReadOnlyUser
+    Default: CFn-Sample-PowerUser
     Description: IAM-User To PowerUser
   ReadOnlyUserName:
     Type: String
@@ -52,7 +52,8 @@ Parameters:
     Type: String
     Description: Init Password
     NoEcho: True
-
+  ## パスワードは、最低でも次の要件を満たす必要があります
+  # ・1つ以上の「大文字アルファベット (A–Z)」「小文字アルファベット (a–z)」「数字」「記号」
 
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 # Resources
@@ -116,13 +117,13 @@ Resources:
 # Output Parameter
 # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 Outputs:
-  AdominUserName:
+  AdominUserOutput:
     Description: IAM-User To AdminUser
     Value: !Ref AdminUserName
-  PowerUserGroupName:
+  PowerUserGroupOutput:
     Description: IAM-User To PowerUser
     Value: !Ref PowerUserName
-  ReadOnlyUserName:
+  ReadOnlyUserOutput:
     Description: IAM-User To ReadOnlyUser
     Value: !Ref ReadOnlyUserName
   LoginURL:

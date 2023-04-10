@@ -26,6 +26,7 @@ No.|リソース名|説明
 6.|CFn-VpcNetwork-Template|シンプルなVPC環境を構築するCloudFormationテンプレート
 7.|CFn-PrivateLink-Template|異なるVPC間でプライベートリンクを経由して接続可能なWeb環境を構築するサンプルテンプレート
 8.|CFn-Web2-App-Template|Web2階層アプリケーションを構築するCloudFormationテンプレート
+9.|CFn-IAM-Template|AWSアカウント発行時のIAM周りの設定を行うCFnテンプレート
 
 ---
 ## ライセンス
